@@ -1,5 +1,7 @@
 # Flux
 
+> **Notice** Flux is moving house! Please see https://github.com/weaveworks/flux/wiki/MoveToFluxCD
+
 We believe in GitOps:
 
 - **You declaratively describe the entire desired state of your
@@ -31,8 +33,8 @@ new infrastructure.
 
 ![Deployment Pipeline](site/images/flux-cd-diagram.png)
 
-[![CircleCI](https://circleci.com/gh/weaveworks/flux.svg?style=svg)](https://circleci.com/gh/weaveworks/flux)
-[![GoDoc](https://godoc.org/github.com/weaveworks/flux?status.svg)](https://godoc.org/github.com/weaveworks/flux)
+[![CircleCI](https://circleci.com/gh/fluxcd/flux.svg?style=svg)](https://circleci.com/gh/fluxcd/flux)
+[![GoDoc](https://godoc.org/github.com/fluxcd/flux?status.svg)](https://godoc.org/github.com/fluxcd/flux)
 
 ## What Flux does
 
@@ -64,7 +66,8 @@ Its major features are:
 - [Babylon Health](https://www.babylonhealth.com/)
 - [College of William & Mary](https://www.wm.edu)
 - [Control Plane](https://control-plane.io)
-- [Crowd Riff](https://crowdriff.com) 
+- [Crowd Riff](https://crowdriff.com)
+- [FireHydrant](https://firehydrant.io)
 - [Gini](https://gini.net)
 - [Improwised Technologies](https://www.improwised.com/)
 - [iQmetrix](https://www.iqmetrix.com)

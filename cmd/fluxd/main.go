@@ -146,6 +146,7 @@ func main() {
 		registryTrace        = fs.Bool("registry-trace", false, "output trace of image registry requests to log")
 		registryInsecure     = fs.StringSlice("registry-insecure-host", []string{}, "let these registry hosts skip TLS host verification and fall back to using HTTP instead of HTTPS; this allows man-in-the-middle attacks, so use with extreme caution")
 		registryExcludeImage = fs.StringSlice("registry-exclude-image", []string{"k8s.gcr.io/*"}, "do not scan images that match these glob expressions; the default is to exclude the 'k8s.gcr.io/*' images")
+		registryUseLabels    = fs.StringSlice("registry-use-labels", []string{"index.docker.io/weaveworks/*", "index.docker.io/fluxcd/*"}, "use the timestamp (RFC3339) from labels for (canonical) image refs that match these glob expression")
 
 		// AWS authentication
 		registryAWSRegions         = fs.StringSlice("registry-ecr-region", nil, "include just these AWS regions when scanning images in ECR; when not supplied, the cluster's region will included if it can be detected through the AWS API")
@@ -287,7 +288,7 @@ func main() {
 	possiblyRequired := stringset(RequireValues)
 	for _, r := range *registryRequire {
 		if !possiblyRequired.has(r) {
-			logger.Log("err", fmt.Sprintf("--registry-required value %q is not in possible values {%s}", r, strings.Join(RequireValues, ",")))
+			logger.Log("err", fmt.Sprintf("--registry-require value %q is not in possible values {%s}", r, strings.Join(RequireValues, ",")))
 			os.Exit(1)
 		}
 	}
@@ -453,7 +454,7 @@ func main() {
 		awsPreflight, credsWithAWSAuth := registry.ImageCredsWithAWSAuth(imageCreds, log.With(logger, "component", "aws"), awsConf)
 		if mandatoryRegistry.has(RequireECR) {
 			if err := awsPreflight(); err != nil {
-				logger.Log("error", "AWS API required (due to --registry-required=ecr), but not available", "err", err)
+				logger.Log("error", "AWS API required (due to --registry-require=ecr), but not available", "err", err)
 				os.Exit(1)
 			}
 		}
@@ -498,6 +499,9 @@ func main() {
 
 		cacheRegistry = &cache.Cache{
 			Reader: cacheClient,
+			Decorators: []cache.Decorator{
+				cache.TimestampLabelWhitelist(*registryUseLabels),
+			},
 		}
 		cacheRegistry = registry.NewInstrumentedRegistry(cacheRegistry)
 
@@ -609,7 +613,7 @@ func main() {
 				client.Token(*token),
 				transport.NewUpstreamRouter(),
 				*upstreamURL,
-				remote.NewErrorLoggingUpstreamServer(daemon, upstreamLogger),
+				remote.NewErrorLoggingServer(daemon, upstreamLogger),
 				*rpcTimeout,
 				upstreamLogger,
 			)
