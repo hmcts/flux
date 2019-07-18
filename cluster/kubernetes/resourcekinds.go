@@ -459,7 +459,7 @@ func makeFluxHelmReleaseWorkload(fluxHelmRelease *fhr_v1alpha2.FluxHelmRelease) 
 // analogous to that in cluster/kubernetes/resource/fluxhelmrelease.go
 func createK8sFHRContainers(annotations map[string]string, values map[string]interface{}) []apiv1.Container {
 	var containers []apiv1.Container
-	kresource.FindFluxHelmReleaseContainers(annotations, values, func(name string, image image.Ref, _ kresource.ImageSetter) error {
+	kresource.FindFluxHelmReleaseContainers(annotations, values, func(name string, image image.Ref, _ resource.ImagePaths, _ kresource.ImageSetter) error {
 		containers = append(containers, apiv1.Container{
 			Name:  name,
 			Image: image.String(),

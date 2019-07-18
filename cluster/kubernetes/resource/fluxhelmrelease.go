@@ -50,6 +50,7 @@ type ImageSetter func(image.Ref)
 
 type imageAndSetter struct {
 	image  image.Ref
+	paths  resource.ImagePaths
 	setter ImageSetter
 }
 
@@ -78,27 +79,27 @@ func sorted_containers(containers map[string]imageAndSetter) []string {
 // FluxHelmRelease (manifest, or cluster resource, or otherwise) and
 // calls visit with each container name and image it finds, as well as
 // procedure for changing the image value.
-func FindFluxHelmReleaseContainers(annotations map[string]string, values map[string]interface{}, visit func(string, image.Ref, ImageSetter) error) {
+func FindFluxHelmReleaseContainers(annotations map[string]string, values map[string]interface{}, visit func(string, image.Ref, resource.ImagePaths, ImageSetter) error) {
 	containers := make(map[string]imageAndSetter)
 
 	// an image defined at the top-level is given a standard container name:
 	if image, setter, ok := interpretAsContainer(stringMap(values)); ok {
-		containers[ReleaseContainerName] = imageAndSetter{image, setter}
+		containers[ReleaseContainerName] = imageAndSetter{image: image, setter: setter}
 	}
 
 	// an image as part of a field is treated as a "container" spec
 	// named for the field:
 	for k, v := range values {
 		if image, setter, ok := interpret(v); ok {
-			containers[k] = imageAndSetter{image, setter}
+			containers[k] = imageAndSetter{image: image, setter: setter}
 		}
 	}
 
 	// user mapped images, it will overwrite automagically interpreted
 	// images with user defined ones:
-	for k, v := range containerImageMappingsFromAnnotations(annotations) {
+	for k, v := range mapContainerImagePathsFromAnnotations(annotations) {
 		if image, setter, ok := interpretMappedContainerImage(values, v); ok {
-			containers[k] = imageAndSetter{image, setter}
+			containers[k] = imageAndSetter{image, v, setter}
 		}
 	}
 
@@ -106,7 +107,7 @@ func FindFluxHelmReleaseContainers(annotations map[string]string, values map[str
 	// defined in sorted_containers, so the calls to visit are
 	// predictable:
 	for _, k := range sorted_containers(containers) {
-		visit(k, containers[k].image, containers[k].setter)
+		visit(k, containers[k].image, containers[k].paths, containers[k].setter)
 	}
 }
 
@@ -261,80 +262,80 @@ func interpretAsImage(m mapper) (image.Ref, ImageSetter, bool) {
 	return image.Ref{}, nil, false
 }
 
-// containerImageMappingsFromAnnotations collects yaml dot notation
+// mapContainerImagePathsFromAnnotations collects yaml dot notation
 // mappings of container images from the given annotations.
-func containerImageMappingsFromAnnotations(annotations map[string]string) map[string]ContainerImageMap {
-	cim := make(map[string]ContainerImageMap)
+func mapContainerImagePathsFromAnnotations(annotations map[string]string) map[string]resource.ImagePaths {
+	ips := make(map[string]resource.ImagePaths)
 	for k, v := range annotations {
 		switch {
 		case strings.HasPrefix(k, ImageRegistryPrefix):
 			container := strings.TrimPrefix(k, ImageRegistryPrefix)
-			i, _ := cim[container]
-			i.RegistryPath = v
-			cim[container] = i
+			i, _ := ips[container]
+			i.Registry = v
+			ips[container] = i
 		case strings.HasPrefix(k, ImageRepositoryPrefix):
 			container := strings.TrimPrefix(k, ImageRepositoryPrefix)
-			i, _ := cim[container]
-			i.ImagePath = v
-			cim[container] = i
+			i, _ := ips[container]
+			i.Repository = v
+			ips[container] = i
 		case strings.HasPrefix(k, ImageTagPrefix):
 			container := strings.TrimPrefix(k, ImageTagPrefix)
-			i, _ := cim[container]
-			i.TagPath = v
-			cim[container] = i
+			i, _ := ips[container]
+			i.Tag = v
+			ips[container] = i
 		}
 	}
-	return cim
+	return ips
 }
 
-func interpretMappedContainerImage(values map[string]interface{}, cim ContainerImageMap) (image.Ref, ImageSetter, bool) {
+func interpretMappedContainerImage(values map[string]interface{}, ip resource.ImagePaths) (image.Ref, ImageSetter, bool) {
 	v, err := gabs.Consume(values)
 	if err != nil {
 		return image.Ref{}, nil, false
 	}
 
-	imageValue := v.Path(cim.ImagePath).Data()
+	imageValue := v.Path(ip.Repository).Data()
 	if img, ok := imageValue.(string); ok {
-		if cim.RegistryPath == "" && cim.TagPath == "" {
+		if ip.Registry == "" && ip.Tag == "" {
 			if imgRef, err := image.ParseRef(img); err == nil {
 				return imgRef, func(ref image.Ref) {
-					v.SetP(ref.String(), cim.ImagePath)
+					v.SetP(ref.String(), ip.Repository)
 				}, true
 			}
 		}
 
 		switch {
-		case cim.RegistryPath != "" && cim.TagPath != "":
-			registryValue := v.Path(cim.RegistryPath).Data()
+		case ip.Registry != "" && ip.Tag != "":
+			registryValue := v.Path(ip.Registry).Data()
 			if reg, ok := registryValue.(string); ok {
-				tagValue := v.Path(cim.TagPath).Data()
+				tagValue := v.Path(ip.Tag).Data()
 				if tag, ok := tagValue.(string); ok {
 					if imgRef, err := image.ParseRef(reg + "/" + img + ":" + tag); err == nil {
 						return imgRef, func(ref image.Ref) {
-							v.SetP(ref.Domain, cim.RegistryPath)
-							v.SetP(ref.Image, cim.ImagePath)
-							v.SetP(ref.Tag, cim.TagPath)
+							v.SetP(ref.Domain, ip.Registry)
+							v.SetP(ref.Image, ip.Repository)
+							v.SetP(ref.Tag, ip.Tag)
 						}, true
 					}
 				}
 			}
-		case cim.RegistryPath != "":
-			registryValue := v.Path(cim.RegistryPath).Data()
+		case ip.Registry != "":
+			registryValue := v.Path(ip.Registry).Data()
 			if reg, ok := registryValue.(string); ok {
 				if imgRef, err := image.ParseRef(reg + "/" + img); err == nil {
 					return imgRef, func(ref image.Ref) {
-						v.SetP(ref.Domain, cim.RegistryPath)
-						v.SetP(ref.Name.Image+":"+ref.Tag, cim.ImagePath)
+						v.SetP(ref.Domain, ip.Registry)
+						v.SetP(ref.Name.Image+":"+ref.Tag, ip.Repository)
 					}, true
 				}
 			}
-		case cim.TagPath != "":
-			tagValue := v.Path(cim.TagPath).Data()
+		case ip.Tag != "":
+			tagValue := v.Path(ip.Tag).Data()
 			if tag, ok := tagValue.(string); ok {
 				if imgRef, err := image.ParseRef(img + ":" + tag); err == nil {
 					return imgRef, func(ref image.Ref) {
-						v.SetP(ref.Name.String(), cim.ImagePath)
-						v.SetP(ref.Tag, cim.TagPath)
+						v.SetP(ref.Name.String(), ip.Repository)
+						v.SetP(ref.Tag, ip.Tag)
 					}, true
 				}
 			}
@@ -349,10 +350,11 @@ func interpretMappedContainerImage(values map[string]interface{}, cim ContainerI
 func (fhr FluxHelmRelease) Containers() []resource.Container {
 	var containers []resource.Container
 
-	containerSetter := func(container string, image image.Ref, _ ImageSetter) error {
+	containerSetter := func(container string, image image.Ref, imagePaths resource.ImagePaths, _ ImageSetter) error {
 		containers = append(containers, resource.Container{
 			Name:  container,
 			Image: image,
+			Paths: imagePaths,
 		})
 		return nil
 	}
@@ -368,7 +370,7 @@ func (fhr FluxHelmRelease) Containers() []resource.Container {
 // get away with a value-typed receiver because we set a map entry.
 func (fhr FluxHelmRelease) SetContainerImage(container string, ref image.Ref) error {
 	found := false
-	imageSetter := func(name string, image image.Ref, setter ImageSetter) error {
+	imageSetter := func(name string, image image.Ref, _ resource.ImagePaths, setter ImageSetter) error {
 		if container == name {
 			setter(ref)
 			found = true

@@ -13,9 +13,16 @@ type Resource interface {
 	Bytes() []byte        // the definition, for sending to cluster.Sync
 }
 
+type ImagePaths struct {
+	Registry   string
+	Repository string
+	Tag        string
+}
+
 type Container struct {
 	Name  string
 	Image image.Ref
+	Paths ImagePaths
 }
 
 type Workload interface {
