@@ -86,6 +86,7 @@ type WorkloadResult struct {
 
 type ContainerUpdate struct {
 	Container string
+	Mapping   resource.ImagePath
 	Current   image.Ref
 	Target    image.Ref
 }

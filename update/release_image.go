@@ -263,6 +263,7 @@ func (s ReleaseImageSpec) calculateImageUpdates(rc ReleaseContext, candidates []
 			newImageID := currentImageID.WithNewTag(latestImage.ID.Tag)
 			containerUpdates = append(containerUpdates, ContainerUpdate{
 				Container: container.Name,
+				Mapping:   container.Mapping,
 				Current:   currentImageID,
 				Target:    newImageID,
 			})

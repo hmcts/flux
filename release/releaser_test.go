@@ -1059,6 +1059,10 @@ func (m *badManifests) SetWorkloadContainerImage(def []byte, id resource.ID, con
 	return def, nil
 }
 
+func (m *badManifests) SetWorkloadImagePaths(def []byte, id resource.ID, paths resource.ImagePath, image image.Ref) ([]byte, error) {
+	return def, nil
+}
+
 func Test_BadRelease(t *testing.T) {
 	mCluster := mockCluster(hwSvc)
 	spec := update.ReleaseImageSpec{

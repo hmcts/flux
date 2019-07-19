@@ -21,6 +21,8 @@ func ErrResourceNotFound(name string) error {
 type Store interface {
 	// Set the container image of a resource in the store
 	SetWorkloadContainerImage(ctx context.Context, resourceID resource.ID, container string, newImageID image.Ref) error
+	// Set the values of the image paths of a resource in the store
+	SetWorkloadImagePaths(ctx context.Context, resourceID resource.ID, paths resource.ImagePath, newImageID image.Ref) error
 	// UpdateWorkloadPolicies modifies a resource in the store to apply the policy-update specified.
 	// It returns whether a change in the resource was actually made as a result of the change
 	UpdateWorkloadPolicies(ctx context.Context, resourceID resource.ID, update resource.PolicyUpdate) (bool, error)

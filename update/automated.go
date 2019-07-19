@@ -114,6 +114,7 @@ func (a *Automated) calculateImageUpdates(rc ReleaseContext, candidates []*Workl
 				newImageID := currentImageID.WithNewTag(change.ImageID.Tag)
 				containerUpdates = append(containerUpdates, ContainerUpdate{
 					Container: container.Name,
+					Mapping:   container.Mapping,
 					Current:   currentImageID,
 					Target:    newImageID,
 				})

@@ -49,9 +49,9 @@ type FluxHelmRelease struct {
 type ImageSetter func(image.Ref)
 
 type imageAndSetter struct {
-	image  image.Ref
-	paths  resource.ImagePaths
-	setter ImageSetter
+	image   image.Ref
+	mapping resource.ImagePath
+	setter  ImageSetter
 }
 
 // sorted_containers returns an array of container names in ascending
@@ -79,7 +79,7 @@ func sorted_containers(containers map[string]imageAndSetter) []string {
 // FluxHelmRelease (manifest, or cluster resource, or otherwise) and
 // calls visit with each container name and image it finds, as well as
 // procedure for changing the image value.
-func FindFluxHelmReleaseContainers(annotations map[string]string, values map[string]interface{}, visit func(string, image.Ref, resource.ImagePaths, ImageSetter) error) {
+func FindFluxHelmReleaseContainers(annotations map[string]string, values map[string]interface{}, visit func(string, image.Ref, resource.ImagePath, ImageSetter) error) {
 	containers := make(map[string]imageAndSetter)
 
 	// an image defined at the top-level is given a standard container name:
@@ -107,7 +107,7 @@ func FindFluxHelmReleaseContainers(annotations map[string]string, values map[str
 	// defined in sorted_containers, so the calls to visit are
 	// predictable:
 	for _, k := range sorted_containers(containers) {
-		visit(k, containers[k].image, containers[k].paths, containers[k].setter)
+		visit(k, containers[k].image, containers[k].mapping, containers[k].setter)
 	}
 }
 
@@ -264,8 +264,8 @@ func interpretAsImage(m mapper) (image.Ref, ImageSetter, bool) {
 
 // mapContainerImagePathsFromAnnotations collects yaml dot notation
 // mappings of container images from the given annotations.
-func mapContainerImagePathsFromAnnotations(annotations map[string]string) map[string]resource.ImagePaths {
-	ips := make(map[string]resource.ImagePaths)
+func mapContainerImagePathsFromAnnotations(annotations map[string]string) map[string]resource.ImagePath {
+	ips := make(map[string]resource.ImagePath)
 	for k, v := range annotations {
 		switch {
 		case strings.HasPrefix(k, ImageRegistryPrefix):
@@ -288,7 +288,7 @@ func mapContainerImagePathsFromAnnotations(annotations map[string]string) map[st
 	return ips
 }
 
-func interpretMappedContainerImage(values map[string]interface{}, ip resource.ImagePaths) (image.Ref, ImageSetter, bool) {
+func interpretMappedContainerImage(values map[string]interface{}, ip resource.ImagePath) (image.Ref, ImageSetter, bool) {
 	v, err := gabs.Consume(values)
 	if err != nil {
 		return image.Ref{}, nil, false
@@ -345,16 +345,16 @@ func interpretMappedContainerImage(values map[string]interface{}, ip resource.Im
 	return image.Ref{}, nil, false
 }
 
-// Containers returns the containers that are defined in the
+// Updates returns the containers that are defined in the
 // FluxHelmRelease.
 func (fhr FluxHelmRelease) Containers() []resource.Container {
 	var containers []resource.Container
 
-	containerSetter := func(container string, image image.Ref, imagePaths resource.ImagePaths, _ ImageSetter) error {
+	containerSetter := func(container string, image image.Ref, mapping resource.ImagePath, _ ImageSetter) error {
 		containers = append(containers, resource.Container{
-			Name:  container,
-			Image: image,
-			Paths: imagePaths,
+			Name:    container,
+			Image:   image,
+			Mapping: mapping,
 		})
 		return nil
 	}
@@ -370,7 +370,7 @@ func (fhr FluxHelmRelease) Containers() []resource.Container {
 // get away with a value-typed receiver because we set a map entry.
 func (fhr FluxHelmRelease) SetContainerImage(container string, ref image.Ref) error {
 	found := false
-	imageSetter := func(name string, image image.Ref, _ resource.ImagePaths, setter ImageSetter) error {
+	imageSetter := func(name string, image image.Ref, _ resource.ImagePath, setter ImageSetter) error {
 		if container == name {
 			setter(ref)
 			found = true

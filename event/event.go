@@ -244,7 +244,7 @@ type ReleaseEventCommon struct {
 const (
 	// ReleaseImageSpecType is a type of release spec when there are update.Images
 	ReleaseImageSpecType = "releaseImageSpecType"
-	// ReleaseContainersSpecType is a type of release spec when there are update.Containers
+	// ReleaseContainersSpecType is a type of release spec when there are update.Updates
 	ReleaseContainersSpecType = "releaseContainersSpecType"
 )
 

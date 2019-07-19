@@ -38,6 +38,19 @@ func (f *rawFiles) SetWorkloadContainerImage(ctx context.Context, id resource.ID
 	return f.setManifestWorkloadContainerImage(r, container, newImageID)
 }
 
+// Set the values of the image paths of a resource in the store
+func (f *rawFiles) SetWorkloadImagePaths(ctx context.Context, id resource.ID, paths resource.ImagePath, newImageID image.Ref) error {
+	resourcesByID, err := f.GetAllResourcesByID(ctx)
+	if err != nil {
+		return err
+	}
+	r, ok := resourcesByID[id.String()]
+	if !ok {
+		return ErrResourceNotFound(id.String())
+	}
+	return f.setManifestWorkloadImagePaths(r, paths, newImageID)
+}
+
 func (f *rawFiles) setManifestWorkloadContainerImage(r resource.Resource, container string, newImageID image.Ref) error {
 	fullFilePath := filepath.Join(f.baseDir, r.Source())
 	def, err := ioutil.ReadFile(fullFilePath)
@@ -45,6 +58,23 @@ func (f *rawFiles) setManifestWorkloadContainerImage(r resource.Resource, contai
 		return err
 	}
 	newDef, err := f.manifests.SetWorkloadContainerImage(def, r.ResourceID(), container, newImageID)
+	if err != nil {
+		return err
+	}
+	fi, err := os.Stat(fullFilePath)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fullFilePath, newDef, fi.Mode())
+}
+
+func (f *rawFiles) setManifestWorkloadImagePaths(r resource.Resource, paths resource.ImagePath, newImageID image.Ref) error {
+	fullFilePath := filepath.Join(f.baseDir, r.Source())
+	def, err := ioutil.ReadFile(fullFilePath)
+	if err != nil {
+		return err
+	}
+	newDef, err := f.manifests.SetWorkloadImagePaths(def, r.ResourceID(), paths, newImageID)
 	if err != nil {
 		return err
 	}

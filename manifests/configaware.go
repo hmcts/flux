@@ -151,6 +151,29 @@ func (ca *configAware) SetWorkloadContainerImage(ctx context.Context, resourceID
 	return nil
 }
 
+func (ca *configAware) SetWorkloadImagePaths(ctx context.Context, resourceID resource.ID, paths resource.ImagePath,
+	newImageID image.Ref) error {
+	resourcesByID, err := ca.getResourcesByID(ctx)
+	if err != nil {
+		return err
+	}
+	resWithOrigin, ok := resourcesByID[resourceID.String()]
+	if !ok {
+		return ErrResourceNotFound(resourceID.String())
+	}
+	if resWithOrigin.configFile == nil {
+		if err := ca.rawFiles.setManifestWorkloadImagePaths(resWithOrigin.resource, paths, newImageID); err != nil {
+			return err
+		}
+	} else if err := ca.setConfigFileWorkloadImagePaths(ctx,
+		resWithOrigin.configFile, resWithOrigin.resource, paths, newImageID); err != nil {
+		return err
+	}
+	// Reset resources, since we have modified one
+	ca.resetResources()
+	return nil
+}
+
 func (ca *configAware) setConfigFileWorkloadContainerImage(ctx context.Context, cf *ConfigFile, r resource.Resource,
 	container string, newImageID image.Ref) error {
 	if cf.PatchUpdated != nil {
@@ -168,6 +191,28 @@ func (ca *configAware) setConfigFileWorkloadContainerImage(ctx context.Context, 
 	if len(result) > 0 && result[len(result)-1].Error != nil {
 		updaters := cf.CommandUpdated.Updaters
 		return fmt.Errorf("error executing image updater command %q from file %q: %s\noutput:\n%s",
+			updaters[len(result)-1].ContainerImage.Command,
+			result[len(result)-1].Error,
+			r.Source(),
+			result[len(result)-1].Output,
+		)
+	}
+	return nil
+}
+
+func (ca *configAware) setConfigFileWorkloadImagePaths(ctx context.Context, cf *ConfigFile, r resource.Resource,
+	paths resource.ImagePath, newImageID image.Ref) error {
+	if cf.PatchUpdated != nil {
+		return ca.updatePatchFile(ctx, cf, func(previousManifests []byte) ([]byte, error) {
+			return ca.manifests.SetWorkloadImagePaths(previousManifests, r.ResourceID(), paths, newImageID)
+		})
+	}
+
+	// Command-updated
+	result := cf.ExecImagePathUpdaters(ctx, r.ResourceID(), paths, newImageID)
+	if len(result) > 0 && result[len(result)-1].Error != nil {
+		updaters := cf.CommandUpdated.Updaters
+		return fmt.Errorf("error executing image path updater command %q from file %q: %s\noutput:\n%s",
 			updaters[len(result)-1].ContainerImage.Command,
 			result[len(result)-1].Error,
 			r.Source(),

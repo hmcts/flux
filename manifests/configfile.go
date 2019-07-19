@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"github.com/weaveworks/flux/image"
 	"github.com/weaveworks/flux/resource"
 )
 
@@ -41,10 +42,15 @@ type Generator struct {
 
 type Updater struct {
 	ContainerImage ContainerImageUpdater `yaml:"containerImage"`
+	ImagePaths     ImagePathsUpdater	 `yaml:"imagePaths"`
 	Policy         PolicyUpdater
 }
 
 type ContainerImageUpdater struct {
+	Command string
+}
+
+type ImagePathsUpdater struct {
 	Command string
 }
 
@@ -103,7 +109,7 @@ func (cf *ConfigFile) ExecGenerators(ctx context.Context, generators []Generator
 			Error:  err,
 		}
 		result = append(result, r)
-		// Stop exectuing on the first command error
+		// Stop executing on the first command error
 		if err != nil {
 			break
 		}
@@ -130,6 +136,23 @@ func (cf *ConfigFile) ExecContainerImageUpdaters(ctx context.Context,
 		commands = append(commands, u.ContainerImage.Command)
 	}
 	return cf.execCommandsWithCombinedOutput(ctx, env, commands)
+}
+
+// ExecImagePathUpdaters executes all the image path updates in the configuration file.
+// It will stop at the first error, in which case the returned error wil be non-nil.
+func (cf *ConfigFile) ExecImagePathUpdaters(ctx context.Context,
+	workload resource.ID, paths resource.ImagePath, image image.Ref) []ConfigFileCombinedExecResult {
+		env := makeEnvFromResourceID(workload)
+		env = append(env, makeEnvFromImagePaths(paths, image)...)
+		commands := []string{}
+		var updaters []Updater
+		if cf.CommandUpdated != nil {
+			updaters = cf.CommandUpdated.Updaters
+		}
+		for _, u := range updaters {
+			commands = append(commands, u.ImagePaths.Command)
+		}
+		return cf.execCommandsWithCombinedOutput(ctx, env, commands)
 }
 
 // ExecPolicyUpdaters executes all the policy update commands given in
@@ -198,4 +221,39 @@ func makeEnvFromResourceID(id resource.ID) []string {
 		"FLUX_WL_KIND=" + kind,
 		"FLUX_WL_NAME=" + name,
 	}
+}
+
+func makeEnvFromImagePaths(paths resource.ImagePath, image image.Ref) []string {
+	var env []string
+	switch {
+	case paths.Registry != "" && paths.Tag != "":
+		env = append(env,
+			"FLUX_REG_PATH=" + paths.Registry,
+			"FLUX_REG=" + image.Domain,
+			"FLUX_IMG_PATH=" + paths.Repository,
+			"FLUX_IMG=" + image.Image,
+			"FLUX_TAG_PATH=" + paths.Tag,
+			"FLUX_TAG=" + image.Tag,
+		)
+	case paths.Registry != "":
+		env = append(env,
+			"FLUX_REG_PATH=" + paths.Registry,
+			"FLUX_REG=" + image.Domain,
+			"FLUX_IMG_PATH=" + paths.Repository,
+			"FLUX_IMG=" + image.Name.Image + ":" + image.Tag,
+		)
+	case paths.Tag != "":
+		env = append(env,
+			"FLUX_IMG_PATH=" + paths.Repository,
+			"FLUX_IMG=" + image.Name.String(),
+			"FLUX_TAG_PATH=" + paths.Tag,
+			"FLUX_TAG=" + image.Tag,
+		)
+	default:
+		env = append(env,
+			"FLUX_IMG_PATH" + paths.Repository,
+			"FLUX_IMG=" + image.String(),
+		)
+	}
+	return env
 }

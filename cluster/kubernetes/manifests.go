@@ -133,7 +133,11 @@ func (m *manifests) ParseManifest(def []byte, source string) (map[string]resourc
 }
 
 func (m *manifests) SetWorkloadContainerImage(def []byte, id resource.ID, container string, image image.Ref) ([]byte, error) {
-	return updateWorkload(def, id, container, image)
+	return updateContainer(def, id, container, image)
+}
+
+func (m *manifests) SetWorkloadImagePaths(def []byte, id resource.ID, paths resource.ImagePath, image image.Ref) ([]byte, error) {
+	return updatePaths(def, id, paths, image)
 }
 
 func (m *manifests) CreateManifestPatch(originalManifests, modifiedManifests []byte, originalSource, modifiedSource string) ([]byte, error) {

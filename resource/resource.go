@@ -13,16 +13,38 @@ type Resource interface {
 	Bytes() []byte        // the definition, for sending to cluster.Sync
 }
 
-type ImagePaths struct {
+type ImagePath struct {
 	Registry   string
 	Repository string
 	Tag        string
 }
 
+func (m ImagePath) Map(i image.Ref) map[string]string {
+	var im map[string]string
+	if m.Repository == ""  {
+		return im
+	}
+	switch {
+	case m.Registry != "" && m.Tag != "":
+		im[m.Registry] = i.Domain
+		im[m.Repository] = i.Image
+		im[m.Tag] = i.Tag
+	case m.Registry != "":
+		im[m.Registry] = i.Domain
+		im[m.Repository] = i.Image + ":" + i.Tag
+	case m.Tag != "":
+		im[m.Repository] = i.Name.String()
+		im[m.Tag] = i.Tag
+	default:
+		im[m.Repository] = i.String()
+	}
+	return im
+}
+
 type Container struct {
-	Name  string
-	Image image.Ref
-	Paths ImagePaths
+	Name    string
+	Image   image.Ref
+	Mapping ImagePath
 }
 
 type Workload interface {

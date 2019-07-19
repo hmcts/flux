@@ -39,7 +39,13 @@ func (rc *ReleaseContext) WriteUpdates(ctx context.Context, updates []*update.Wo
 	err := func() error {
 		for _, update := range updates {
 			for _, container := range update.Updates {
-				err := rc.resourceStore.SetWorkloadContainerImage(ctx, update.ResourceID, container.Container, container.Target)
+				var err error
+				switch {
+				case container.Mapping.Repository != "":
+					err = rc.resourceStore.SetWorkloadImagePaths(ctx, update.ResourceID, container.Mapping, container.Target)
+				default:
+					err = rc.resourceStore.SetWorkloadContainerImage(ctx, update.ResourceID, container.Container, container.Target)
+				}
 				if err != nil {
 					return errors.Wrapf(err, "updating resource %s in %s", update.ResourceID.String(), update.Resource.Source())
 				}

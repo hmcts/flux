@@ -21,6 +21,7 @@ type Mock struct {
 	SyncFunc                      func(cluster.SyncSet) error
 	PublicSSHKeyFunc              func(regenerate bool) (ssh.PublicKey, error)
 	SetWorkloadContainerImageFunc func(def []byte, id resource.ID, container string, newImageID image.Ref) ([]byte, error)
+	SetWorkloadImagePathsFunc     func(def []byte, id resource.ID, paths resource.ImagePath, newImageID image.Ref) ([]byte, error)
 	LoadManifestsFunc             func(base string, paths []string) (map[string]resource.Resource, error)
 	ParseManifestFunc             func(def []byte, source string) (map[string]resource.Resource, error)
 	UpdateWorkloadPoliciesFunc    func([]byte, resource.ID, resource.PolicyUpdate) ([]byte, error)
@@ -62,6 +63,10 @@ func (m *Mock) PublicSSHKey(regenerate bool) (ssh.PublicKey, error) {
 
 func (m *Mock) SetWorkloadContainerImage(def []byte, id resource.ID, container string, newImageID image.Ref) ([]byte, error) {
 	return m.SetWorkloadContainerImageFunc(def, id, container, newImageID)
+}
+
+func (m *Mock) SetWorkloadImagePaths(def []byte, id resource.ID, paths resource.ImagePath, newImageID image.Ref) ([]byte, error) {
+	return m.SetWorkloadImagePathsFunc(def, id, paths, newImageID)
 }
 
 func (m *Mock) LoadManifests(baseDir string, paths []string) (map[string]resource.Resource, error) {
