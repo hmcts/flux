@@ -26,7 +26,7 @@ require (
 	github.com/golang/gddo v0.0.0-20190312205958-5a2505f3dbf0
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/protobuf v1.3.1
-	github.com/google/go-cmp v0.2.0
+	github.com/google/go-cmp v0.3.0
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190410012400-2c55d17f707c // indirect
@@ -62,21 +62,20 @@ require (
 	github.com/weaveworks/promrus v1.2.0 // indirect
 	github.com/whilp/git-urls v0.0.0-20160530060445-31bac0d230fa
 	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a // indirect
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
 	golang.org/x/sys v0.0.0-20190411185658-b44545bcd369
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	google.golang.org/api v0.3.2 // indirect
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.20.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
-	k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d
+	k8s.io/apimachinery v0.15.7
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/code-generator v0.0.0-20190511023357-639c964206c2
 	k8s.io/helm v2.13.1+incompatible
-	k8s.io/klog v0.3.0
+	k8s.io/klog v0.3.1
 	k8s.io/kube-openapi v0.0.0-20190401085232-94e1e7b7574c // indirect
 )
 
