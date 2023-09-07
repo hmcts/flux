@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go v1.19.11
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
-	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/docker/distribution v0.0.0-00010101000000-000000000000
 	github.com/docker/go-metrics v0.0.0-20181218153428-b84716841b82 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
